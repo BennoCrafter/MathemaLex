@@ -1,65 +1,136 @@
 function calculate() {
-    var calculation = document.getElementById("calculation").value;
-    var result;
-    tokens = [];
-    validOperators = ["+", "-", "*", "/"];
-    var currentToken = "";
-    
-    function little_calculate(num1, op, num2){
-        if (op === "+"){
-            return num1 + num2
-        }
-        if (op === "-"){
-            return num1 - num2
-        }
-        if (op === "*"){
-            return num1 * num2
-        }
-        if (op === "/"){
-            return num1 / num2
-        }
-    }
-    lexer(calculation);
-    function lexer(calculation){
-        for (let i = 0; i < calculation.length; i++) {
-            let char = calculation[i];
-            if (!isNaN(char)) {
-              currentToken += char;
-            } else if (validOperators.includes(char)) {
-              if (currentToken !== "") {
-                tokens.push(["INTEGER", parseInt(currentToken)]);
-                currentToken = "";
-              }
-              tokens.push(["OP", char]);
-            } else if (char.match(/[a-z]/i)) {
-              tokens.push(["VAR", char]);
-            }
-          }
-          
-          // Add the last number if it exists
-          if (currentToken !== "") {
-            tokens.push(["INTEGER", parseInt(currentToken)]);
-          }
-    }
+    const expression = document.getElementById("expression").value;
+    const outputQueue = shuntingYardAlgorithm(expression);
+    const result = evaluateRPN(outputQueue);
 
-    while (tokens.length !== 1){
-        let num1 = tokens[0][1];
-        let op = tokens[1][1];
-        let num2 = tokens[2][1];
-        tokens = tokens.slice(3);
-        tokens.unshift(["INTEGER", little_calculate(num1, op, num2)]);    
-    }
-    result = tokens[0][1];
     if (result === undefined) {
-      document.getElementById("calculation").classList.add("invalid");
+      document.getElementById("expression").classList.add("invalid");
   } else {
-      document.getElementById("calculation").classList.remove("invalid");
+      document.getElementById("expression").classList.remove("invalid");
       document.getElementById("result").innerHTML = result;
   }
-  
   }
-  document.getElementById("calculation").addEventListener("keyup", function(event) {
+  document.getElementById("expression").addEventListener("keyup", function(event) {
     if (event.key === "Enter") {
-      document.getElementById("add-button").click();
+      document.getElementById("enter-button").click();
     }
   });
+
+  function isNumber(token) {
+    return !isNaN(parseFloat(token)) && isFinite(token);
+  }
+  
+  function hasHigherPrecedence(op1, op2) {
+    const precedence = {
+      '+': 1,
+      '-': 1,
+      '*': 2,
+      '/': 2,
+      '^': 3,
+    };
+    return precedence[op1] > precedence[op2];
+  }
+  
+  function isLeftAssociative(op) {
+    return ['+', '-', '*', '/'].includes(op);
+  }
+  
+  function shuntingYardAlgorithm(expression) {
+    const tokens = expression.match(/(?<!\d)\d+(?:\.\d+)?|[+\-*/^(),]/g);
+    const outputQueue = [];
+    const operatorStack = [];
+    try{
+        tokens.length
+    }catch{
+        return undefined
+    }
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (isNumber(token)) {
+        outputQueue.push(token);
+      } else if (token === '(') {
+        operatorStack.push(token);
+      } else if (token === ')') {
+        while (operatorStack[operatorStack.length - 1] !== '(') {
+          outputQueue.push(operatorStack.pop());
+        }
+        operatorStack.pop(); // Discard the left parenthesis
+  
+        if (operatorStack.length > 0 && operatorStack[operatorStack.length - 1] !== '(') {
+          outputQueue.push(operatorStack.pop());
+        }
+      } else if (token === ',') {
+        while (operatorStack[operatorStack.length - 1] !== '(') {
+          outputQueue.push(operatorStack.pop());
+        }
+      } else { // token is an operator
+        while (
+          operatorStack.length > 0 &&
+          operatorStack[operatorStack.length - 1] !== '(' &&
+          (hasHigherPrecedence(operatorStack[operatorStack.length - 1], token) ||
+          (operatorStack[operatorStack.length - 1] === token && isLeftAssociative(token)))
+        ) {
+          outputQueue.push(operatorStack.pop());
+        }
+        operatorStack.push(token);
+      }
+    }
+  
+    while (operatorStack.length > 0) {
+      if (operatorStack[operatorStack.length - 1] === '(') {
+        throw new Error("Mismatched parentheses.");
+      }
+      outputQueue.push(operatorStack.pop());
+    }
+  
+    return outputQueue;
+  }
+  
+  function evaluateRPN(expression) {
+    const stack = [];
+    try{
+        expression.length
+    }catch{
+        return undefined
+    }
+    for (let i = 0; i < expression.length; i++) {
+      const token = expression[i];
+      if (isNumber(token)) {
+        stack.push(parseFloat(token));
+      } else if (['+', '-', '*', '/', '^'].includes(token)) {
+        if (stack.length < 2) {
+            return undefined
+          // throw new Error("Invalid expression.");
+        }
+        const operand2 = stack.pop();
+        const operand1 = stack.pop();
+        let result;
+        switch (token) {
+          case '+':
+            result = operand1 + operand2;
+            break;
+          case '-':
+            result = operand1 - operand2;
+            break;
+          case '*':
+            result = operand1 * operand2;
+            break;
+          case '/':
+            result = operand1 / operand2;
+            break;
+          case '^':
+            result = Math.pow(operand1, operand2);
+            break;
+          // Add more functions as needed
+        }
+        stack.push(result);
+      }
+    }
+  
+    if (stack.length !== 1) {
+      throw new Error("Invalid expression.");
+    }
+    return stack[0];
+  }
+  
+  
