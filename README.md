@@ -1,2 +1,2 @@
 # JsCalculator
-A (yet) very bad calculator. Website: https://verybadcalculator.netlify.app/
+A (yet) very bad calculator. Website: https://mathemalex.netlify.app/
